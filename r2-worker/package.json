@@ -1,0 +1,13 @@
+{
+  "name": "hooboo-image-storage",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "check": "tsc --noEmit --strict --skipLibCheck --target ES2022 --lib ES2022 --module ESNext --moduleResolution Bundler env.d.ts index.ts",
+    "types": "wrangler types env.d.ts"
+  },
+  "devDependencies": {
+    "wrangler": "4.148.0",
+    "typescript": "7.0.2"
+  }
+}

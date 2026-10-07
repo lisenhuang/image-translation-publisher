@@ -1,0 +1,26 @@
+node_modules/
+.next/
+.env*
+!.env.example
+data/
+*.log
+
+tunnel/
+backups/
+
+jobs/
+build.log
+source.tar.gz
+
+.dev.vars*
+.wrangler/
+
+# Private exports, credentials and deployment archives
+*.tar.gz
+*.tgz
+*.zip
+*.sqlite*
+*credentials*
+*.key
+*.pem
+.DS_Store
