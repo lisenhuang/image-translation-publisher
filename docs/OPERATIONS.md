@@ -41,7 +41,7 @@ The owner enters and submits the username and password. Then log in at https://h
 ## Contributor workflow
 
 1. Log in and choose **新建投稿**.
-2. Enter **中文标题**, select images, then use the up/down controls to set the reading order. Supported files: static JPG, PNG or WebP, up to 12 MB each, 20 images and 72 MB per submission. The server validates decoded image content, dimensions and type. Gallery image storage is capped at 1 GB, including English versions and in-flight upload reservations.
+2. Enter **中文标题**, select images, then use the up/down controls to set the reading order. Supported files: static JPG, PNG or WebP, up to 12 MB each, 20 images and 72 MB per submission. The server validates decoded image content, dimensions and type. Gallery image storage is capped at 10 GiB by default, including English versions and in-flight upload reservations.
 3. Optionally add Chinese body text, author credit and a source link. Source links are stored for attribution; the server does not fetch them.
 4. Choose **提交原稿**. The submission waits for an authorised processing session.
 5. When it becomes **待你确认**, compare originals and English images in **预览并确认**. Choose **确认并发布** only after checking wording, artwork and order.
@@ -151,10 +151,22 @@ The Worker streams reads back to the application; the application performs sessi
 
 The Worker source is in `r2-worker/`. It uses Cloudflare sign-in and a bucket binding, so no S3 account key is needed. Set `CLOUDFLARE_ACCOUNT_ID` for your own Cloudflare account before deployment. Its bridge token is a Cloudflare Worker secret, mirrored in the site's private `.env.production`. Deploy Worker updates with `wrangler deploy --config r2-worker/wrangler.jsonc`; preserve the existing bridge secret.
 
-R2 usage shares the account's existing allowance. The 1 GB gallery limit caps stored application images; it is not a billing guarantee for other apps or request volume. No paid-plan upgrade was made.
+R2 usage shares the account's existing allowance. The 10 GiB gallery limit caps stored application images; it is not a billing guarantee for other apps or request volume. No paid-plan upgrade was made.
 
 ## Interface language
 
 Language detection uses the request's primary Accept-Language and the browser's primary system language. Only `en` and `zh-CN` are supported. Chinese variants such as zh-TW, zh-HK and zh-Hant resolve to Simplified Chinese. A valid `hb_lang` preference overrides the default. The preference is separate from authentication and preserves form contents when toggled. Navigation, page titles, statuses, forms, accessibility labels and built-in errors are bilingual. Submitted originals and published English article content are not translated by the interface switch.
 
 HTML is rendered dynamically with the correct language and remains private/no-store, preventing one visitor's language choice from being served to another. Published image caching is unchanged. Cloud API clients can request error messages with `X-Hooboo-Language: en` or `zh-CN`; errors also return `error_key` for consistent client-side language switching.
+
+## Storage capacity monitoring
+
+`MAX_STORAGE_BYTES=10737418240` sets the shared image cap to 10 GiB. It counts all originals, English outputs and active upload reservations; R2 bucket capacity is separate. Per-image and per-submission limits still apply.
+
+Read the current usage without downloading images or exposing credentials:
+
+```sh
+docker compose -p hooboo exec -T web node scripts/storage-status.mjs
+```
+
+The JSON includes the cap, tracked bytes, active reservations, remaining capacity and the latest upload rejected by this cap. A notification service can poll this metadata and alert once when capacity is exhausted or an upload is blocked. Rejected uploads are recorded persistently, so an alert can fire even if usage is slightly below the exact cap.

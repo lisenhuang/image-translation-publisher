@@ -1,6 +1,14 @@
 # 🖼️ Image Translation Publisher
 
 [![CI/CD](https://github.com/lisenhuang/image-translation-publisher/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lisenhuang/image-translation-publisher/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/github/package-json/v/lisenhuang/image-translation-publisher?label=version)](package.json)
+[![GitHub stars](https://img.shields.io/github/stars/lisenhuang/image-translation-publisher?style=flat&logo=github)](https://github.com/lisenhuang/image-translation-publisher/stargazers)
+
+[![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=nextdotjs&logoColor=white)](https://nextjs.org/)
+[![React](https://img.shields.io/badge/React-19-149ECA?logo=react&logoColor=white)](https://react.dev/)
+[![Node.js](https://img.shields.io/badge/Node.js-22-5FA04E?logo=nodedotjs&logoColor=white)](https://nodejs.org/)
+[![Cloudflare R2](https://img.shields.io/badge/Cloudflare-R2-F38020?logo=cloudflare&logoColor=white)](https://developers.cloudflare.com/r2/)
+[![Docker](https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white)](Dockerfile)
 
 Turn Chinese article titles and images into English editions, preserving the artwork and layout, then share them in a public gallery.
 
@@ -90,7 +98,7 @@ Download images from the [Actions run](https://github.com/lisenhuang/image-trans
 | Images per article | 20 |
 | Size per image | 12 MB |
 | Total per submission | 72 MB |
-| Total tracked images | App cap: 1 GiB by default via `MAX_STORAGE_BYTES`; separate from R2 capacity |
+| Total tracked images | App cap: 10 GiB via `MAX_STORAGE_BYTES`; includes originals and English outputs |
 
 🔒 Originals and unfinished editions stay private. Images are stored in R2; the application server stores database metadata. Passwords use salted scrypt hashes, and authenticated changes require CSRF verification.
 

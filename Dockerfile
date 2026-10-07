@@ -13,6 +13,7 @@ RUN groupadd -g 1001 gallery && useradd -u 1001 -g gallery gallery && mkdir -p /
 COPY --from=build --chown=gallery:gallery /app/.next/standalone ./
 COPY --from=build --chown=gallery:gallery /app/.next/static ./.next/static
 COPY --from=build --chown=gallery:gallery /app/public ./public
+COPY --chown=gallery:gallery scripts/storage-status.mjs ./scripts/storage-status.mjs
 USER gallery
 EXPOSE 3000
 CMD ["node","server.js"]

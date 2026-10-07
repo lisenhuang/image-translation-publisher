@@ -92,6 +92,7 @@ jobs:
         run: |
           node --input-type=module <<'JS'
           import assert from 'node:assert/strict';
+          import {execFileSync} from 'node:child_process';
           const origin = 'http://127.0.0.1:3000';
           const health = await fetch(`${origin}/api/health`);
           assert.equal(health.status, 200);
@@ -109,7 +110,12 @@ jobs:
             assert.equal(response.status, 401, path);
             assert.match(response.headers.get('cache-control'), /no-store/);
           }
-          console.log('Production health, gallery, login and access controls passed.');
+          const storage = JSON.parse(execFileSync('docker', ['exec', 'gallery-ci', 'node', 'scripts/storage-status.mjs']).toString());
+          assert.equal(storage.limitBytes, 10 * 1024 ** 3);
+          assert.equal(storage.usedBytes, 0);
+          assert.equal(storage.remainingBytes, storage.limitBytes);
+          assert.equal(storage.quotaBlocked, null);
+          console.log('Production health, gallery, login, access controls and storage monitoring passed.');
           JS
       - name: Show container logs on failure
         if: failure()
