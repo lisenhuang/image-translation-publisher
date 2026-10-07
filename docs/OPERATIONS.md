@@ -41,7 +41,7 @@ The owner enters and submits the username and password. Then log in at https://h
 ## Contributor workflow
 
 1. Log in and choose **新建投稿**.
-2. Enter **中文标题**, select images, then use the up/down controls to set the reading order. Supported files: static JPG, PNG or WebP, up to 12 MB each, 20 images and 72 MB per submission. The server validates decoded image content, dimensions and type. Gallery image storage is capped at 10 GiB by default, including English versions and in-flight upload reservations.
+2. Enter **中文标题**, select images, then use the up/down controls to set the reading order. Supported files: static JPG, PNG or WebP, up to 12 MB each, 20 images and 72 MB per submission. The server validates decoded image content, dimensions and type. It uses the detected format for storage and downloads, so a valid PNG exported with a `.jpg` filename is accepted without changing its bytes. Gallery image storage is capped at 10 GiB by default, including English versions and in-flight upload reservations.
 3. Optionally add Chinese body text, author credit and a source link. Source links are stored for attribution; the server does not fetch them.
 4. Choose **提交原稿**. The submission waits for an authorised processing session.
 5. When it becomes **待你确认**, compare originals and English images in **预览并确认**. Choose **确认并发布** only after checking wording, artwork and order.

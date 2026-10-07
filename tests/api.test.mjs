@@ -13,7 +13,7 @@ const {publicImage}=await import('../lib/media.mjs');
 const {db,one,run}=await import('../lib/db.mjs');
 const {digest}=await import('../lib/security.mjs');
 let assertions=0;
-async function call(route,{method='GET',body,headers={},status=200,local=false}={}){headers={...headers};if(route==='worker/claim'&&!headers['idempotency-key'])headers['idempotency-key']=randomBytes(12).toString('hex');const h={host:local?'127.0.0.1:3318':'example.test',...(method==='GET'?{}:{origin:local?'http://127.0.0.1:3318':process.env.APP_ORIGIN}),...headers};let content=body;if(body&&!(body instanceof FormData)){h['content-type']='application/json';content=JSON.stringify(body);}const res=await handle(new Request((local?'http://127.0.0.1:3318':'https://example.test')+'/api/'+route,{method,headers:h,body:content}),route.split('/'));assert.equal(res.status,status,route+': '+(res.status!==status?await res.clone().text():''));assertions++;return res;}
+async function call(route,{method='GET',body,headers={},status=200,local=false}={}){headers={...headers};if(route==='worker/claim'&&!headers['idempotency-key'])headers['idempotency-key']=randomBytes(12).toString('hex');const h={host:local?'127.0.0.1:3318':'example.test',...(method==='GET'?{}:{origin:local?'http://127.0.0.1:3318':process.env.APP_ORIGIN}),...headers};let content=body;if(body&&!(body instanceof FormData)){h['content-type']='application/json';content=JSON.stringify(body);}const res=await handle(new Request((local?'http://127.0.0.1:3318':'https://example.test')+'/api/'+route,{method,headers:h,body:content}),route.split('?')[0].split('/'));assert.equal(res.status,status,route+': '+(res.status!==status?await res.clone().text():''));assertions++;return res;}
 const png=await sharp({create:{width:60,height:40,channels:3,background:'#537348'}}).png().toBuffer();
 function form(files=[png,png]){const f=new FormData();f.set('title','测试原稿');f.set('credit','测试作者');f.set('text','原文');files.forEach((b,i)=>f.append('images',new File([b],`image-${i}.png`,{type:'image/png'})));return f;}
 test('complete authentication, upload, lease, review, publication and persistence flow',async()=>{
@@ -64,7 +64,7 @@ try{
  await call('submissions/'+id+'/retry',{method:'POST',headers:auth});
  claim=(await(await call('worker/claim',{method:'POST',headers:worker})).json()).submission;job={...worker,'x-job-lease':claim.lease};
  for(let i=0;i<2;i++){const f=new FormData();f.set('image',new File([png],'english.png',{type:'image/png'}));await call('worker/articles/'+id+'/images/'+i,{method:'PUT',headers:job,body:f});}
- const f=new FormData();f.set('image',new File([png],'retry.png',{type:'image/png'}));await call('worker/articles/'+id+'/images/0',{method:'PUT',headers:job,body:f});assert.equal(one("SELECT COUNT(*) AS n FROM assets WHERE kind='english'").n,2);
+ const f=new FormData();f.set('image',new File([png],'retry.jpg',{type:'image/jpeg'}));await call('worker/articles/'+id+'/images/0',{method:'PUT',headers:job,body:f});assert.equal(one("SELECT COUNT(*) AS n FROM assets WHERE kind='english'").n,2);
  const englishId=one("SELECT id FROM assets WHERE kind='english' AND position=0").id;await call('media/'+englishId,{status:404});assert.equal((await publicImage(englishId+'.png')).status,404);await call('media/'+englishId,{headers:auth});
  await call('worker/articles/'+id+'/complete',{method:'POST',headers:job,body:{title_en:'An English title',text_en:'English body.'}});
  await call('worker/articles/'+id+'/publish',{method:'POST',headers:worker,status:409});
@@ -74,6 +74,18 @@ try{
  const pub=(await(await call('articles/'+id)).json()).article;assert.equal(pub.title_en,'An English title');assert.ok(!('title_cn' in pub));assert.ok(!('originals' in pub));assert.deepEqual(pub.images.map(i=>i.position),[0,1]);
  const cdnMedia=await publicImage(englishId+'.png');assert.equal(cdnMedia.status,200);assert.match(cdnMedia.headers.get('cache-control'),/public.*s-maxage=604800/);assert.equal((await publicImage(englishId+'.jpg')).status,404);await call('media/'+englishId);await call('media/'+submission.originals[0].id,{status:404});
  const persistent=JSON.parse(execFileSync(process.execPath,['--input-type=module','-e',"import Database from 'better-sqlite3';const db=new Database(process.env.DATA_DIR+'/gallery.sqlite');console.log(JSON.stringify(db.prepare('SELECT status FROM articles').get()));"],{cwd:process.cwd(),env:process.env}).toString());assert.equal(persistent.status,'published');
+ // Browser MIME types follow extensions; storage and responses must follow bytes.
+ const jpeg=await sharp(png).jpeg().toBuffer(),webp=await sharp(png).webp().toBuffer();
+ for(const [bytes,name,declared,actual] of [[png,'export.jpg','image/jpeg','image/png'],[jpeg,'export.png','image/png','image/jpeg'],[webp,'export.jpg','image/jpeg','image/webp']]){
+  const mixed=form([]);mixed.append('images',new File([bytes],name,{type:declared}));
+  const result=await(await call('submissions',{method:'POST',headers:{...auth,'idempotency-key':'mixed-'+actual},body:mixed,status:201})).json();
+  const asset=one('SELECT * FROM assets WHERE article_id=?',result.id);assert.equal(asset.mime,actual);assert.equal(asset.bytes,bytes.length);
+  const media=await call('media/'+asset.id,{headers:auth});assert.equal(media.headers.get('content-type'),actual);assert.deepEqual(Buffer.from(await media.arrayBuffer()),bytes);
+  const download=await call('media/'+asset.id+'?download=1',{headers:auth});assert.match(download.headers.get('content-disposition'),new RegExp('\\.'+({'image/png':'png','image/jpeg':'jpg','image/webp':'webp'}[actual])));
+  await call('media/'+asset.id,{status:404});
+ }
+ const disguised=form([]);disguised.append('images',new File([await sharp(png).gif().toBuffer()],'unsupported.jpg',{type:'image/jpeg'}));
+ await call('submissions',{method:'POST',headers:{...auth,'idempotency-key':'unsupported-content'},body:disguised,status:400});
  await call('logout',{method:'POST',headers:auth});await call('submissions',{headers:auth,status:401});
  const expiredLogin=await call('login',{method:'POST',body:setup.body});const expiredCookie=expiredLogin.headers.get('set-cookie').split(';')[0];run('UPDATE sessions SET expires=0');await call('submissions',{headers:{cookie:expiredCookie},status:401});
  for(let i=0;i<10;i++){await call('login',{method:'POST',body:{username:'nobody',password:'wrong'},headers:{'cf-connecting-ip':'rate-test'},status:401});}await call('login',{method:'POST',body:setup.body,headers:{'cf-connecting-ip':'rate-test'},status:429});

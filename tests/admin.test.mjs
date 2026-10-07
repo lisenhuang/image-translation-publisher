@@ -27,7 +27,7 @@ async function login(username,password){const response=await call('login',{metho
 const original=await sharp({create:{width:120,height:80,channels:3,background:'#aac088'}}).png().toBuffer();
 const english=await sharp({create:{width:120,height:80,channels:3,background:'#364b27'}}).png().toBuffer();
 function upload(bytes=original){const form=new FormData();form.set('title','管理员翻译测试');form.set('text','中文正文');form.append('images',new File([bytes],'original.png',{type:'image/png'}));return form;}
-function output(bytes=english){const form=new FormData();form.set('image',new File([bytes],'english.png',{type:'image/png'}));return form;}
+function output(bytes=english){const form=new FormData();form.set('image',new File([bytes],'english.jpg',{type:'image/jpeg'}));return form;}
 
 test('admin login, role migration, private downloads and direct publication with CSRF and lease enforcement',async()=>{try{
  assert.equal(one('SELECT role FROM users WHERE id=?','legacy').role,'contributor');
