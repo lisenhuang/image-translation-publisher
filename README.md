@@ -1,5 +1,7 @@
 # 🖼️ Image Translation Publisher
 
+[![CI/CD](https://github.com/lisenhuang/image-translation-publisher/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lisenhuang/image-translation-publisher/actions/workflows/ci.yml)
+
 Turn Chinese article titles and images into English editions, preserving the artwork and layout, then share them in a public gallery.
 
 **[🌍 Live website](https://hooboo.aify.nz)** · **[🔑 Sign in](https://hooboo.aify.nz/login)** · **[📚 Operations guide](docs/OPERATIONS.md)**
@@ -67,6 +69,19 @@ Open **http://127.0.0.1:3318**. Follow the [operations guide](docs/OPERATIONS.md
 | `npm run build` | Build the production application |
 | `npm run dev` | Start local development on port 3318 |
 
+## ✅ CI/CD
+
+Every push to `main` and pull request runs:
+
+| Check | Covers |
+| --- | --- |
+| 🧪 Tests | Authentication, admin roles, upload/publish flow, privacy and languages |
+| 🏗️ Builds | Next.js production build, Worker type checking and deployment dry run |
+| 🐳 Containers | Build and HTTP smoke tests on Linux AMD64 and ARM64 |
+| 📦 Delivery | Tested Docker images and checksums saved for 7 days after successful `main` pushes |
+
+Download images from the [Actions run](https://github.com/lisenhuang/image-translation-publisher/actions/workflows/ci.yml). Use ARM64 for Oracle US. Live deployment follows the [operations guide](docs/OPERATIONS.md). CI uses isolated data and needs no production credentials.
+
 ## 📦 Upload limits
 
 | Setting | Limit |
@@ -75,7 +90,7 @@ Open **http://127.0.0.1:3318**. Follow the [operations guide](docs/OPERATIONS.md
 | Images per article | 20 |
 | Size per image | 12 MB |
 | Total per submission | 72 MB |
-| Gallery storage | 1 GB by default; configurable |
+| Total tracked images | App cap: 1 GiB by default via `MAX_STORAGE_BYTES`; separate from R2 capacity |
 
 🔒 Originals and unfinished editions stay private. Images are stored in R2; the application server stores database metadata. Passwords use salted scrypt hashes, and authenticated changes require CSRF verification.
 

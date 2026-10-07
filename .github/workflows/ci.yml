@@ -1,0 +1,130 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  app:
+    name: Application tests and build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm test
+      - run: npm run build
+        env:
+          DATA_DIR: ${{ runner.temp }}/gallery-build
+
+  worker:
+    name: R2 Worker validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      WRANGLER_SEND_METRICS: 'false'
+    defaults:
+      run:
+        working-directory: r2-worker
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: r2-worker/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run check
+      - run: npx --no-install wrangler deploy --dry-run --outdir "$RUNNER_TEMP/worker-build"
+
+  container:
+    name: Docker smoke test and delivery (${{ matrix.arch }})
+    needs: [app, worker]
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 20
+    env:
+      IMAGE_TAG: image-translation-publisher:${{ github.sha }}
+      IMAGE_ARCH: ${{ matrix.arch }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Build production image
+        run: docker build --tag "$IMAGE_TAG" .
+      - name: Start isolated application
+        run: |
+          docker run --detach --name gallery-ci \
+            --publish 127.0.0.1:3000:3000 \
+            --env APP_ORIGIN=http://127.0.0.1:3000 \
+            "$IMAGE_TAG"
+          curl --fail --silent --show-error --retry 20 --retry-delay 2 \
+            --retry-connrefused --retry-all-errors \
+            http://127.0.0.1:3000/api/health
+      - name: Verify production HTTP responses
+        run: |
+          node --input-type=module <<'JS'
+          import assert from 'node:assert/strict';
+          const origin = 'http://127.0.0.1:3000';
+          const health = await fetch(`${origin}/api/health`);
+          assert.equal(health.status, 200);
+          assert.deepEqual(await health.json(), {ok: true});
+          const articles = await fetch(`${origin}/api/articles`);
+          assert.equal(articles.status, 200);
+          assert.deepEqual(await articles.json(), {articles: []});
+          for (const path of ['/', '/login']) {
+            const response = await fetch(`${origin}${path}`);
+            assert.equal(response.status, 200, path);
+            assert.match(response.headers.get('content-type'), /text\/html/);
+          }
+          for (const path of ['/api/admin/submissions', '/api/submissions']) {
+            const response = await fetch(`${origin}${path}`);
+            assert.equal(response.status, 401, path);
+            assert.match(response.headers.get('cache-control'), /no-store/);
+          }
+          console.log('Production health, gallery, login and access controls passed.');
+          JS
+      - name: Show container logs on failure
+        if: failure()
+        run: docker logs gallery-ci || true
+      - name: Stop test container
+        if: always()
+        run: docker rm --force gallery-ci || true
+      - name: Package tested image
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          docker save "$IMAGE_TAG" | gzip > "$RUNNER_TEMP/image-translation-publisher-linux-$IMAGE_ARCH.tar.gz"
+          cd "$RUNNER_TEMP"
+          sha256sum "image-translation-publisher-linux-$IMAGE_ARCH.tar.gz" > "image-translation-publisher-linux-$IMAGE_ARCH.tar.gz.sha256"
+      - name: Deliver Docker image artifact
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: docker-linux-${{ matrix.arch }}-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/image-translation-publisher-linux-${{ matrix.arch }}.tar.gz
+            ${{ runner.temp }}/image-translation-publisher-linux-${{ matrix.arch }}.tar.gz.sha256
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 7
