@@ -20,3 +20,28 @@
 .error-modal-actions .button{min-height:44px;min-width:90px}
 body:has(.error-modal[open]){overflow:hidden}
 @media(max-width:480px){.error-modal{padding:24px}.error-modal-actions .button{flex:1}.error-modal h2{font-size:20px}}
+
+/* A split keeps the original private and makes its article lineage navigable. */
+.header a[aria-disabled=true],.admin-workspace a[aria-disabled=true]{opacity:.45;cursor:wait}
+.status.split{background:#e9e6ed;color:#70647e}
+.admin-split,.admin-lineage{border:1px solid var(--line);border-radius:6px;padding:18px;margin:20px 0;background:#f4f5ee}
+.admin-split h3,.admin-lineage h3{font-size:14px;font-weight:500;margin-bottom:8px}
+.admin-split>.button{margin-top:14px}
+.admin-lineage>p{font-size:12px;margin-top:8px;overflow-wrap:anywhere}
+.admin-lineage .text-link,.split-children .text-link{text-align:left;overflow-wrap:anywhere}
+.admin-lineage .optional{padding-bottom:0;border-bottom:0;margin-top:12px}
+.split-confirmation{border-top:1px solid var(--line);margin-top:15px;padding-top:15px;font-size:12px}
+.split-confirmation h4{font-size:14px;margin:0 0 8px}
+.split-confirmation>p{overflow-wrap:anywhere}
+.split-confirmation ul{padding-left:20px;margin:12px 0 18px}
+.split-confirmation li+li{margin-top:7px}
+.split-confirm-actions{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px}
+.split-children{list-style:none;padding:0;margin:12px 0 0;display:grid;gap:10px}
+.split-children li{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.split-children .status{flex-shrink:0}
+.submission-history{margin-top:12px;padding:10px 12px;border-radius:4px;background:#f3f4ed;font-size:10px}
+.submission-history summary{cursor:pointer;color:#66785a}
+.submission-history .text-link{font-size:10px}
+.submission-history p{color:#78816d}
+.filters{flex-wrap:wrap}
+@media(max-width:500px){.split-confirm-actions .button{flex:1}.split-children li{align-items:start;flex-wrap:wrap}.admin-split,.admin-lineage{padding:14px}}

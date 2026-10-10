@@ -119,6 +119,10 @@ An admin can use `POST /api/admin/submissions/ID/retry` with session, Origin and
 
 Changing a user's role takes effect on every request, including existing sessions. Protect the administrator password: it grants access to private originals and public publishing. Keep credentials outside the source archive. Arrange your processing agent's scheduler and confirm its environment supports real image editing; an administrator account alone does not create a scheduled job.
 
+## One image per article
+
+Administrators can split an unpublished multi-image submission into separate single-image articles using the admin workspace or `POST /api/admin/submissions/ID/split`. The original submission remains private history; published articles are immutable. See [SPLIT_WORKFLOW.md](SPLIT_WORKFLOW.md) for lease requirements, retry safety, provenance, private R2 object reuse, and the deployment/rollback warning.
+
 ## Cloudflare CDN
 
 The hostname is proxied through Cloudflare. Static Next.js CSS and JavaScript, the site icon and published English images use the CDN. Public images have extension-bearing `/media/UUID.png`, `.jpg` or `.webp` URLs and `Cache-Control: public, max-age=86400, s-maxage=604800, immutable`. Only published English images can use these URLs. UUIDs change when an output is replaced during processing.

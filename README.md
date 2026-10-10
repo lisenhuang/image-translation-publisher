@@ -44,6 +44,8 @@ Accounts + jobs   --> SQLite
 
 Cloud agents can process and publish through the admin workspace or HTTPS API, without SSH or R2 credentials.
 
+Administrators can split unpublished multi-image submissions into [one article per image](docs/SPLIT_WORKFLOW.md), preserving the private originals and source history. Each image gets its own English title, translation review, and publication.
+
 ## 🧩 What's inside?
 
 | Component | Purpose |
